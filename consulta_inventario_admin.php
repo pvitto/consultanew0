@@ -51,174 +51,142 @@ function guardarMovimiento($usuario, $referencia, $fecha, $precio_con_descuento,
     }
 }
 
-function Alternos($usuario, $alternos, $referencia, $con) {
+function Alternos($usuario, $alternos, $referencia, $con)
+{
 
-    // Busca la línea en la que está el ítem utilizando la descripción de los alternos
-    $buscarQuery = $con->prepare("SELECT Linea FROM inventario WHERE Referencia = :referencia");
-    $buscarQuery->execute(['referencia' => $referencia]);
-    $linea = $buscarQuery->fetchColumn();
+    // Busca la línea en la que está el ítem utilizando la descripción de los alternos
+    $buscarQuery = $con->prepare("SELECT Linea FROM inventario WHERE Referencia = :referencia");
+    $buscarQuery->execute(['referencia' => $referencia]);
+    $linea = $buscarQuery->fetchColumn();
 
-    if (!$linea) {
-        return [];
-    }
+    if (!$linea) {
+        return [];
+    }
 
-    // Revisa los permisos del usuario para los alternos y complementarios
-    $resultado_alterno = BloquearLineas($linea, 'alterno');
-    $resultado_complementario = BloquearLineas($linea, 'complementario');
+    // Revisa los permisos del usuario para los alternos y complementarios
+    $resultado_alterno = BloquearLineas($linea, 'alterno');
+    $resultado_complementario = BloquearLineas($linea, 'complementario');
 
-    $string = explode("...", $alternos);
+    $string = explode("...", $alternos);
 
-    $string_alterno = [];
-    $string_complementario = [];
-    $string_alias = [];
+    $string_alterno = [];
+    $string_complementario = [];
+    $string_alias = [];
 
-    // Separa si los comentarios son de un alterno, complementario o alias
-    foreach ($string as $str) {
-        if (strpos($str, "Alterno") !== false) {
-            $string_alterno[] = $str;
-        } elseif (strpos($str, "Complementario") !== false) {
-            $string_complementario[] = $str;
-        } else {
-            $string_alias[] = $str;
-        }
-    }
+    // Separa si los comentarios son de un alterno, complementario o alias
+    foreach ($string as $str) {
+        if (strpos($str, "Alterno") !== false) {
+            $string_alterno[] = $str;
+        } elseif (strpos($str, "Complementario") !== false) {
+            $string_complementario[] = $str;
+        } else {
+            $string_alias[] = $str;
+        }
+    }
 
-    $resultado_alias = !empty($string_alias);
+    $resultado_alias = !empty($string_alias);
 
-    // Crea keys para cada tipo de comentario para que sea mas facil sortearlas afuera de la funcion
-    $resultado_final = [
-        'alternos' => $resultado_alterno ? [] : $string_alterno,
-        'complementarios' => $resultado_complementario ? [] : $string_complementario,
-        //'alias' => $resultado_alias ? $string_alias : []
-    ];
+    // Crea keys para cada tipo de comentario para que sea mas facil sortearlas afuera de la funcion
+    $resultado_final = [
+        'alternos' => $resultado_alterno ? [] : $string_alterno,
+        'complementarios' => $resultado_complementario ? [] : $string_complementario,
+        //'alias' => $resultado_alias ? $string_alias : []
+    ];
 
-    return $resultado_final;
+    return $resultado_final;
 }
 
 
 
 function Existencias($usuario, $resultado_alterno, $resultuse, $resultcostex, $con, $referencia)
 {
-    $entra = 0;
-    $consulta='';
-    $precio = 0;
-    $consulta .= '<h4 style="font-size:18px">Referencia Buscada: '. $referencia .'</h4><br/>';
-    $referenciaP = '';
- 
-    // Primero vamos con referencias de agrocosat
-    if ($resultado_alterno && !empty($resultado_alterno)) {
+    $entra = 0;
+    $consulta = '';
+    $precio = 0;
+    $consulta .= '<h4 style="font-size:18px">Referencia Buscada: ' . $referencia . '</h4><br/>';
+    $referenciaP = '';
 
-        $registros = $resultado_alterno;
-        if (BloquearLineas($registros[0]['Linea'])) {
+    // Primero vamos con referencias de agrocosat
+    if ($resultado_alterno && !empty($resultado_alterno)) {
 
-            return 
+        $registros = $resultado_alterno;
+        if (BloquearLineas($registros[0]['Linea'])) {
 
-                // --- Mostrar descuento (copiado de consulta_inventario.php) ---
-                if ($sql->rowCount() > 0 
-                && isset($resultado_alterno[0]['Existencias']) 
-                && intval($resultado_alterno[0]['Existencias']) > 0
-                ) {
-                    $descuentoInfo = getDescuentoInfo($referencia, $con);
-                    if ($descuentoInfo) {
-                        renderDescuentoBox($descuentoInfo);
-                    }
-                }
-                ?>
-                <br>
-                
-                <?php 
-                // --- Llamada a la nueva función Existencias ---
-                // Nótese que $idUsuario es el usuario del dropdown
-                // y $referencia es la referencia buscada.
-                echo Existencias($idUsuario, $resultado_alterno, $resultuse[0], $resultcostex[0], $con, $referencia); 
-                
+            return '';
+        }
 
-        }
-
-        $entra = 1;
-
-
-        
-
-        foreach ($registros as $fila) {
-
-        if (($fila['Existencias'] + $fila['Existencias_bog']) > '0' && $fila['Tipo'] == 'agro') {
-            $existencias = $fila['Existencias'];
-            $existencias_bog = $fila['Existencias_bog'];
-            
-
-        } 
-        
-        elseif (($fila['Existencias'] + $fila['Existencias_bog'])  < '1' && $fila['Tipo'] == 'agro') {
-            $existencias = 'IMPORTACION - TIEMPO DE ENTREGA: 60 DIAS';
-            $precio = 0;
-
-        }
-
-
-        $referencia = $fila['Referencia'];
-        $descripcion = $fila['descripcion'];
-        $linea = $fila['Linea'];
-        global $alternos, $precio_con_descuento, $descuento;
-
-        $descuento = $_SESSION['D' . $linea];
-        $precio_con_descuento = 0;
-
-        if (!BloquearLineas($fila['Linea'])) {
-            $alternos = $fila['Alternos'];
-        }
-
-        
-        if (!BloquearLineas($fila['Linea'], 'precio'))
-        {
-            $precio = $fila['Precio'];
-            $precio_con_descuento = round($precio - ($precio * $descuento / 100));
-        }
-        
-        $consulta .= '<table class="table modern-table table-hover" id="tablaPrincipal">
-                    <caption style="background-color:#b2dcff; font-weight:bold"">Consulta de inventario</caption>
-                    <thead>
-                        <tr>
-                            <th>Referencia</th>
-                            <th>Descripción</th>
-                            <th>Bodega <br> BARRANQUILLA </th>
-                            <th>Bodega <br> BOGOTÁ</th>
-                            <th>Precio Antes de IVA</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-
-                        <tr>
-                    <td>' . $referencia . '</td><td>' . $descripcion . '</td><td>' . $existencias . '</td><td>' . $existencias_bog . '</td><td>$' . number_format($precio_con_descuento, 0, '.', ',') . '</td>
-                    </tr>
-
-                    </tbody>
-                    </table>';
-
-
-                    if (($fila['Existencias'] + $fila['Existencias_bog'])  < '1' && $fila['Tipo'] == 'agro') {
-
-                       $consulta.= '<br>'. ExistenciasCostex($resultcostex, $referencia);
-
-                    }
+        $entra = 1;
 
 
 
 
-        }
+        foreach ($registros as $fila) {
 
-       
+            if (($fila['Existencias'] + $fila['Existencias_bog']) > '0' && $fila['Tipo'] == 'agro') {
+                $existencias = $fila['Existencias'];
+                $existencias_bog = $fila['Existencias_bog'];
+            } elseif (($fila['Existencias'] + $fila['Existencias_bog']) < '1' && $fila['Tipo'] == 'agro') {
+                $existencias = 'IMPORTACION - TIEMPO DE ENTREGA: 60 DIAS';
+                $precio = 0;
+            }
 
-        
-        
-        
-        if ($precio == 0) {
-           /* $consulta .= '<div class="alert alert-warning" role="alert" id="MensajePrecioBloqueado" style="color:#111;background:#d7e9fb;font-size:16px;">
-                          Si deseas conocer precios de esta mercancia, consulte con su asesor o al correo:  
-                          <a href="ventas@agro-costa.com">ventas@agro-costa.com</a>
-                          </div>';*/
-        }
-    }
+
+            $referencia = $fila['Referencia'];
+            $descripcion = $fila['descripcion'];
+            $linea = $fila['Linea'];
+            global $alternos, $precio_con_descuento, $descuento;
+
+            $descuento = $_SESSION['D' . $linea];
+            $precio_con_descuento = 0;
+
+            if (!BloquearLineas($fila['Linea'])) {
+                $alternos = $fila['Alternos'];
+            }
+
+
+            if (!BloquearLineas($fila['Linea'], 'precio')) {
+                $precio = $fila['Precio'];
+                $precio_con_descuento = round($precio - ($precio * $descuento / 100));
+            }
+
+            $consulta .= '<table class="table modern-table table-hover" id="tablaPrincipal">
+                        <caption style="background-color:#b2dcff; font-weight:bold"">Consulta de inventario</caption>
+                        <thead>
+                            <tr>
+                                <th>Referencia</th>
+                                <th>Descripción</th>
+                                <th>Bodega <br> BARRANQUILLA </th>
+                                <th>Bodega <br> BOGOTÁ</th>
+                                <th>Precio Antes de IVA</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+
+                            <tr>
+                        <td>' . $referencia . '</td><td>' . $descripcion . '</td><td>' . $existencias . '</td><td>' . $existencias_bog . '</td><td>$' . number_format($precio_con_descuento, 0, '.', ',') . '</td>
+                        </tr>
+
+                        </tbody>
+                        </table>';
+
+
+            if (($fila['Existencias'] + $fila['Existencias_bog']) < '1' && $fila['Tipo'] == 'agro') {
+
+                $consulta .= '<br>' . ExistenciasCostex($resultcostex, $referencia);
+            }
+        }
+
+
+
+
+
+        if ($precio == 0) {
+            /* $consulta .= '<div class="alert alert-warning" role="alert" id="MensajePrecioBloqueado" style="color:#111;background:#d7e9fb;font-size:16px;">
+                                Si deseas conocer precios de esta mercancia, consulte con su asesor o al correo:
+                                <a href="ventas@agro-costa.com">ventas@agro-costa.com</a>
+                                </div>';*/
+        }
+    }
     
 
     // Sacando alias o use
