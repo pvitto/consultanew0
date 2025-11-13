@@ -1,0 +1,1110 @@
+<?php
+
+
+
+// no muestre errores si no me ejecuta algo puedo quitarlo para ver los erroes
+error_reporting(0);
+
+require_once 'logout.php';
+require_once 'funciones_recoger.php';
+require_once 'funciones_tablas.php';
+
+//session_start();
+if (!isset($_SESSION['idusuario'])) {
+    header("Location: login.php");
+    exit();
+}
+
+// Conecta a la base de datos
+$con = ConectarBaseDatos();
+
+
+if (!ChequearExistenciaTabla("acceso_a_usuarios", $con))
+{
+    CrearTabla($con);
+}
+
+function guardarMovimiento($usuario, $referencia, $fecha, $precio_con_descuento, $con)
+{
+    try {
+        // Validate and format the date to ensure it's in the correct MySQL DATETIME format
+        $fecha = date('Y-m-d H:i:s', strtotime($fecha));
+
+        // Prepare the SQL statement
+        $sql = "INSERT INTO mov (Idusuario, referencia, Precio, fechaconsulta) VALUES (:usuario, :referencia, :precio, :fecha)";
+        $stmt = $con->prepare($sql);
+        
+        // Bind parameters to the statement
+        $stmt->bindParam(':usuario', $usuario);
+        $stmt->bindParam(':referencia', $referencia);
+        $stmt->bindParam(':precio', $precio_con_descuento);
+        $stmt->bindParam(':fecha', $fecha);
+        
+        // Execute the query
+        if ($stmt->execute()) {
+           // echo "Movimiento registrado exitosamente";
+        } else {
+            // echo "Error al registrar movimiento";
+        }
+    } catch (PDOException $e) {
+        // Catch and display PDO errors
+        echo "Error al registrar movimiento: " . $e->getMessage();
+    }
+}
+
+
+
+function Alternos($usuario, $alternos, $referencia, $con) {
+
+    // Busca la línea en la que está el ítem utilizando la descripción de los alternos
+    $buscarQuery = $con->prepare("SELECT Linea FROM inventario WHERE Referencia = :referencia");
+    $buscarQuery->execute(['referencia' => $referencia]);
+    $linea = $buscarQuery->fetchColumn();
+
+    if (!$linea) {
+        return [];
+    }
+
+    // Revisa los permisos del usuario para los alternos y complementarios
+    $query = $con->prepare("SELECT linea_{$linea}_alterno, linea_{$linea}_complementario FROM acceso_a_usuarios WHERE usuario = :usuario");
+    $query->execute(['usuario' => $usuario]);
+    $permisos = $query->fetch(PDO::FETCH_ASSOC);
+
+    $resultado_alterno = isset($permisos["linea_{$linea}_alterno"]) && $permisos["linea_{$linea}_alterno"] == 0;
+    $resultado_complementario = isset($permisos["linea_{$linea}_complementario"]) && $permisos["linea_{$linea}_complementario"] == 0;
+
+    $string = explode("...", $alternos);
+
+    $string_alterno = [];
+    $string_complementario = [];
+    $string_alias = [];
+
+    // Separa si los comentarios son de un alterno, complementario o alias
+    foreach ($string as $str) {
+        if (strpos($str, "Alterno") !== false) {
+            $string_alterno[] = $str;
+        } elseif (strpos($str, "Complementario") !== false) {
+            $string_complementario[] = $str;
+        } else {
+            $string_alias[] = $str;
+        }
+    }
+
+    $resultado_alias = !empty($string_alias);
+
+    // Crea keys para cada tipo de comentario para que sea mas facil sortearlas afuera de la funcion
+    $resultado_final = [
+        'alternos' => $resultado_alterno ? $string_alterno : [],
+        'complementarios' => $resultado_complementario ? $string_complementario : [],
+        //'alias' => $resultado_alias ? $string_alias : []
+    ];
+
+    return $resultado_final;
+}
+
+function getDescuentoInfo($referencia, $con) {
+    // Si no hay referencia, retorna false
+    if (!$referencia) return false;
+
+    // Prepara la consulta para obtener el descuento y la fecha de finalizacion para la referencia 
+    $stmt = $con->prepare("SELECT descuento, fecha_final FROM descuentos_items WHERE item = :item LIMIT 1");
+    
+    // Asocia el valor de la referencia al parametro :item de la consulta
+    $stmt->bindParam(':item', $referencia, PDO::PARAM_STR);
+
+    // Ejecuta la consulta en la base de datos
+    $stmt->execute();
+
+    // Obtiene el resultado como un array asociativo (o false si no existe)
+    $info = $stmt->fetch(PDO::FETCH_ASSOC);
+
+    // Si encontro informacion, retorna el descuento y la fecha en un array //asocia
+    if ($info) {
+        return [
+            'descuento' => $info['descuento'],       // Valor del descuento
+            'fecha_final' => $info['fecha_final']    // Fecha hasta cuando aplica
+        ];
+    }
+
+    // Si no encontro nada, retorna false
+    return false;
+}
+
+
+// ===============================================
+// Funcion que imprime el recuadro visual del descuento si existe
+// Recibe el array con los datos del descuento
+function renderDescuentoBox($descuentoInfo) {
+    function formatoFechaEsp($fecha) {
+        $meses = [
+            "01" => "ene", "02" => "feb", "03" => "mar", "04" => "abr",
+            "05" => "may", "06" => "jun", "07" => "jul", "08" => "ago",
+            "09" => "sep", "10" => "oct", "11" => "nov", "12" => "dic"
+        ];
+        $partes = explode("-", $fecha);
+        if(count($partes) == 3) {
+            return $partes[0] . '-' . $meses[$partes[1]] . '-' . $partes[2];
+        }
+        return $fecha;
+    }
+    if (!$descuentoInfo) return;
+
+    // Convertimos ambas fechas a formato Y-m-d (sin horas)
+    $fecha_actual = date('Y-m-d');
+    $fecha_limite = $descuentoInfo['fecha_final'];
+
+    // Si la fecha actual es mayor a la fecha final, ya venció la promo
+    if ($fecha_actual > $fecha_limite) {
+        return;
+    }
+
+
+    ?>
+    <div style="display: flex; justify-content: center; margin: 0px 0 0px 0;">
+      <div id="descuento-box" style="
+        max-width: 700px;
+        width: 100%;
+        padding: 15px 25px;
+        font-size: 15px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: 8px;
+        margin: 0 auto 13px auto;
+        border-radius: 18px;
+        background: linear-gradient(120deg, #ff5722 60%, #f9c846 100%);
+        box-shadow: 0 5px 20px 0 rgba(255, 87, 34, 0.15), 0 1.5px 5px #ffc40088; 
+        color: #fff;">
+        <span class="icon-flash" style="font-size:22px; margin-right:0px; line-height:1;">⚡</span>
+        <div style="width:100%; text-align: center;">
+          <span style="font-weight:700; font-size:16px; letter-spacing:0.1px;">¡¡¡PROMOCIÓN!!! 
+            <span style="font-size:22px; font-weight:900; color:#fff; text-shadow:0 0 5px #fff17f99;">
+              <?php echo intval($descuentoInfo['descuento']); ?>%
+            </span>
+            de descuento en este ITEM, para pago de <span style="font-size:16px; text-decoration: underline;">contado</span>.
+          </span>
+          <br>
+          <span style="font-size:12px; font-weight:600; margin-top:2px; display:inline-block;">
+          (Promoción válida hasta <?php echo formatoFechaEsp($descuentoInfo['fecha_final']); ?>, compra mínima de $8.000.000
+          Aplican condiciones y restricciones)
+          </span>
+        </div>
+      </div>
+    </div>
+    <?php
+}
+//PAOLO
+
+function BloquearLineas($usuario, $linea, $con) {
+    $con = ConectarBaseDatos();
+
+     $query = $con->prepare("SELECT linea_$linea FROM acceso_a_usuarios WHERE usuario = :usuario");
+    $query->bindValue(":usuario", $usuario);
+    $query->execute();
+    $resultado = $query->fetchColumn();
+
+    return $resultado ? true : false;
+}
+
+
+
+function Existencias($usuario, $resultado_alterno, $resultuse, $resultcostex, $con)
+{
+    $entra = 0;
+
+    // Primero vamos con referencias de agrocosat
+    if ($resultado_alterno && !empty($resultado_alterno)) {
+        $fila = $resultado_alterno;
+        if (BloquearLineas($usuario, $fila['Linea'], $con)) {
+            return '<td>0</td><td>0</td><td>0</td><td>$0</td>';
+        }
+
+        $entra = 1;
+        if ($fila['Existencias'] > '0' && $fila['Tipo'] == 'agro') {
+            $existencias = $fila['Existencias'];
+        } elseif ($fila['Existencias'] < '1' && $fila['Tipo'] == 'agro') {
+            $existencias = 'IMPORTACION - TIEMPO DE ENTREGA: 60 DIAS';
+            $precio = 0;
+        }
+
+        $referencia = $fila['Referencia'];
+        $descripcion = $fila['descripcion'];
+        $linea = $fila['Linea'];
+        global $alternos, $precio_con_descuento;
+
+        $descuento = $_SESSION['D' . $linea];
+        $precio_con_descuento = 0;
+
+        if (!BloquearLineas($usuario, $fila['Linea'], $con)) {
+            $alternos = $fila['Alternos'];
+        }
+
+        
+        if (!BloquearLineas($usuario, "{$fila['Linea']}_precio", $con))
+        {
+            $precio = $fila['Precio'];
+            $precio_con_descuento = round($precio - ($precio * $descuento / 100));
+        }
+        
+        $consulta = '<td>' . $referencia . '</td><td>' . $descripcion . '</td><td>' . $existencias . '</td><td>$' . number_format($precio_con_descuento, 2, '.', ',') . '</td>';
+        
+        if ($precio == 0) {
+            $consulta .= '<div class="alert alert-warning" role="alert" id="MensajePrecioBloqueado" style="color:#111;background:#d7e9fb;font-size:16px;">
+                          Si deseas conocer precios de esta mercancia, consulte con su asesor o al correo:  
+                          <a href="ventas@agro-costa.com">ventas@agro-costa.com</a>
+                          </div>';
+        }
+    }
+
+    // Sacando alias o use
+    if ($resultuse && !empty($resultuse) > 0 && $entra != 1) {
+        $entra = 2;
+        $fila = $resultuse;
+        if ($fila['Tipo'] == 'use') {
+            $existencias = $fila['Existencias'];
+            $precio = 0;
+        }
+
+        $referenciaP = trim(substr($fila['descripcion'], 4, 100));
+        $sqlP = "SELECT * FROM inventario WHERE referencia = :referenciaP";
+        $stmtP = $con->prepare($sqlP);
+        $stmtP->execute(['referenciaP' => $referenciaP]);
+        $resultP = $stmtP->fetch();
+
+        if ($stmtP && $stmtP->rowCount() > 0) {
+            $fila = $resultP;
+            if (BloquearLineas($usuario, $fila['Linea'], $con)) {
+                return '<td>0</td><td>0</td><td>0</td><td>$0</td>';
+            }
+
+            if ($fila['Existencias'] > '0' && $fila['Tipo'] == 'agro') {
+                $existencias = $fila['Existencias'];
+            } elseif ($fila['Existencias'] > '0' && $fila['Tipo'] == 'costex') {
+                $existencias = 'ESTE REPUESTO ESTA PARA IMPORTACION. ENTREGA: 5-7 DIAS';
+            } elseif ($fila['Existencias'] < '1' && $fila['Tipo'] == 'agro') {
+                $existencias = 'IMPORTACION - TIEMPO DE ENTREGA: 60 DIAS';
+                $precio = 0;
+            }
+
+            $referencia = $fila['Referencia'];
+            $descripcion = $fila['descripcion'];
+            $linea = (int)$fila['Linea'];
+            global $alternos;
+
+
+            $descuento = $_SESSION['D' . $linea];
+            $precio_con_descuento = 0;
+
+            if (!BloquearLineas($usuario, $fila['Linea'], $con)) {
+                $alternos = $fila['Alternos'];
+            }
+    
+            
+            if (!BloquearLineas($usuario, "{$fila['Linea']}_precio", $con))
+            {
+                $precio = $fila['Precio'];
+                $precio_con_descuento = round($precio - ($precio * $descuento / 100));
+            }
+            
+            $consulta = '<td>' . $referencia . '</td><td>' . $descripcion . '</td><td>' . $existencias . '</td><td>$' . number_format($precio_con_descuento, 2, '.', ',') . '</td>';
+
+            if ($precio == 0) {
+                $consulta .= '<div class="alert alert-warning" role="alert" id="MensajePrecioBloqueado" style="color:#111;background:#d7e9fb;font-size:16px;">
+                              Si deseas conocer precios de esta mercancia, consulte con su asesor o al correo:  
+                              <a href="ventas@agro-costa.com">ventas@agro-costa.com</a>
+                              </div>';
+            }
+
+            echo "<script>window.onload = function() {";
+            echo "var x = document.getElementById('Mensaje');";
+            echo "x.style.display = 'block';";
+            echo "}</script>";
+        } else {
+            $referencia = $fila['Referencia'];
+            $descripcion = $fila['descripcion'];
+            $linea = $fila['Linea'];
+            global $alternos;
+
+            
+            $descuento = $_SESSION['D' . $linea];
+            $precio_con_descuento = 0;
+
+            if (!BloquearLineas($usuario, $fila['Linea'], $con)) {
+                $alternos = $fila['Alternos'];
+            }
+    
+            
+            if (!BloquearLineas($usuario, "{$fila['Linea']}_precio", $con))
+            {
+                $precio = $fila['Precio'];
+                $precio_con_descuento = round($precio - ($precio * $descuento / 100));
+            }
+
+
+            $consulta = '<td>' . $referencia . '</td><td>' . $descripcion . '</td><td>' . $existencias . '</td><td>$' . number_format($precio_con_descuento, 2, '.', ',') . '</td>';
+
+            if ($precio == 0) {
+                $consulta .= '<div class="alert alert-warning" role="alert" id="MensajePrecioBloqueado" style="color:#111;background:#d7e9fb;font-size:16px;">
+                              Si deseas conocer precios de esta mercancia, consulte con su asesor o al correo:  
+                              <a href="ventas@agro-costa.com">ventas@agro-costa.com</a>
+                              </div>';
+            }
+        }
+        
+    }
+
+    // Sacando item de costex
+    if ($resultcostex && !empty($resultcostex) > 0 && $entra != 2 && $entra != 1) {
+        $entra = 3;
+        $fila = $resultcostex;
+        if ($fila['Existencias'] > '0' && $fila['Tipo'] == 'costex') {
+            $existencias = 'ESTE REPUESTO ESTA PARA IMPORTACION. TIEMPO DE ENTREGA: 5-7 DIAS';
+        }
+
+        $referencia = $fila['Referencia'];
+        $descripcion = $fila['descripcion'];
+        $linea = $fila['Linea'];
+        global $alternos;
+
+        $precio_con_descuento = 0;
+
+        $descuento = $_SESSION['D' . $linea];
+
+        if (!BloquearLineas($usuario, $fila['Linea'], $con)) {
+            $alternos = $fila['Alternos'];
+        }
+    
+            
+        if (!BloquearLineas($usuario, "{$fila['Linea']}_precio", $con))
+        {
+            $precio = $fila['Precio'];
+            $precio_con_descuento = round($precio - ($precio * $descuento / 100));
+        }
+
+        $consulta = '<td>' . $referencia . '</td><td>' . $descripcion . '</td><td>' . $existencias . '</td><td>$' . number_format($precio_con_descuento, 2, '.', ',') . '</td>';
+
+        if ($precio == 0) {
+            $consulta .= '<div class="alert alert-warning" role="alert" id="MensajePrecioBloqueado" style="color:#111;background:#d7e9fb;font-size:16px;">
+                          Si deseas conocer precios de esta mercancia, consulte con su asesor o al correo:  
+                          <a href="ventas@agro-costa.com">ventas@agro-costa.com</a>
+                          </div>';
+        }
+    }
+
+    // Pedidos sacando
+    global $Pedidos;
+    $sqlPedidos = "SELECT * FROM pedidos WHERE referencia = :referencia";
+    $stmtPedidos = $con->prepare($sqlPedidos);
+    $stmtPedidos->execute(['referencia' => $referencia]);
+
+    if ($stmtPedidos && $stmtPedidos->rowCount() > 0) {
+        $Pedidos = '<table class="table modern-table table-hover" id="pedidos">
+                    <caption>Proximos en Llegar</caption>           
+                    <thead>
+                        <tr>
+                            <th>Pedido</th>
+                            <th>Referencia</th>
+                            <th>Cantidad</th>
+                            <th>Fecha de Llegada(Aproximada)</th>
+                        </tr>
+                    </thead>
+                    <tbody>';
+
+        while ($fila = $stmtPedidos->fetch(PDO::FETCH_ASSOC)) {
+            $Pedidos .= '<tr><td>' . $fila['IdPedido'] . '</td><td>' . $fila['referencia'] . '</td><td>' . $fila['Cantidad'] . '</td><td>' . $fila['FechaPedido'] . '</td></tr>';
+        }
+
+        $Pedidos .= '</tbody></table>';
+    }
+
+    return $consulta;
+}
+
+?>
+
+
+<!DOCTYPE html>
+<html>
+
+<head>
+    <title>Consulta de inventario</title>
+    <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.3.1/css/bootstrap.min.css">
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.bundle.min.js" integrity="sha384-ka7Sk0Gln4gmtz2MlQnikT1wXgYsOg+OMhuP+IlRH9sENBO0LRn5q+8nbTov4+1p" crossorigin="anonymous"></script>
+
+    <style>
+        body {
+            padding: 0px;
+            font-size: 14px;
+        }
+
+        .container {
+            max-width: 800px;
+            margin: 0 auto;
+        }
+
+         .modern-table {
+      background-color: #ffffff;
+      border-radius: 8px;
+      overflow: hidden;
+      box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+      transition: all 0.3s ease;
+    }
+
+    .modern-table:hover {
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+      transform: translateY(-2px);
+    }
+
+    .modern-table thead {
+      background-color: #e9f2ff;
+    }
+
+    .modern-table th {
+      color: #0d6efd;
+      font-weight: 600;
+      font-size: 14px;
+        padding: 5px 15px !important;
+        vertical-align: middle !important;
+    }
+
+   .modern-table th {
+      vertical-align: middle;
+      text-align: center;
+      font-size: 14px;
+    }
+
+    .modern-table td {
+      vertical-align: middle;
+      text-align: center;
+      font-size: 14px;
+    }
+
+    .modern-table tbody tr:hover {
+      background-color: #f5f9ff;
+    }
+        
+
+        .form-inline {
+            margin-bottom: 20px;
+        }
+
+        .form-inline label {
+            margin-right: 10px;
+        }
+
+        .form-inline input {
+            width: 150px;
+            margin-right: 10px;
+        }
+
+        .alternos td {
+            padding: 6px;
+
+        }
+
+
+        #tablaSecundaria th {
+            vertical-align: bottom;
+            background: #ffeeba;
+            
+            /*#f2d439*/
+        }
+        .alternos th {
+
+            padding: 6px;
+        }
+
+        .alternos {
+            width: 100%;
+            font-size: 14px;
+
+        }
+
+        h4 {
+            font-size: 18px;
+        }
+
+        h1 {
+            margin-top: 20px;
+        }
+
+        body {
+            background-color: #ededed;
+
+
+        }
+
+        nav {
+            box-shadow: 1px 1px 20px #ccc;
+
+        }
+
+        .navbar .nav-item:not(:last-child) {
+            margin-right: 35px;
+        }
+
+        .dropdown-toggle::after {
+            transition: transform 0.15s linear;
+        }
+     
+        .show.dropdown .dropdown-toggle::after {
+            transform: translateY(3px);
+        }
+
+        .hover-row:hover {
+      background-color: #f0f8ff; /* Color que prefieras al pasar el mouse */
+      cursor: pointer;
+    }
+
+      .custom-row {
+      background-color: #ffffff;
+      border-radius: 8px;
+      padding: 1rem;
+      margin-bottom: 1rem;
+      transition: all 0.3s ease;
+    }
+    .header-row {
+      background-color: #f0f8ff;
+      border-radius: 8px;
+    padding: 0.6rem ! IMPORTANT;
+      margin-bottom: 1rem;
+      transition: all 0.3s ease;
+    }
+
+
+    .custom-row:hover {
+      background-color: #f5f9ff;
+      transform: translateY(-2px);
+      text-decoration: none;
+    }
+
+    .row-title {
+      font-weight: 600;
+      color: #0d6efd;
+      font-size: 1.1rem;
+    }
+
+    caption {
+    padding-top: .75rem;
+    padding-bottom: .75rem;
+    color: #000000;
+    text-align: center;
+    caption-side: top;
+    font-size: 16px;
+}
+
+
+
+/*Descuentos CSS*/
+
+#descuento-box {
+  /* Glassmorphism + Neumorphism + Glow + Gradient */
+  background: linear-gradient(120deg, #ff5722 60%, #f9c846 100%);
+  border-radius: 18px;
+  box-shadow: 0 8px 32px 0 rgba(255, 87, 34, 0.25), 0 2px 8px #ffc400bb;
+  color: #fff;
+  font-family: 'Montserrat', Arial, sans-serif;
+  font-size: 18px;
+  padding: 18px 28px;
+  margin: 30px auto 15px auto;
+  max-width: 640px;
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: 20px;
+  overflow: hidden;
+  backdrop-filter: blur(3px);
+  border: 1.5px solid rgba(255,255,255,0.25);
+  animation: pulse-pop 1.5s infinite alternate;
+}
+
+#descuento-box .icon-flash {
+  animation: spin-flash 0.3s linear infinite;
+  margin-right: 18px;
+  font-size: 30px;
+  filter: drop-shadow(0 0 8px #fff17f99);
+}
+
+#descuento-box strong {
+  background: rgba(255,255,255,0.14);
+  border-radius: 8px;
+  padding: 2px 9px 2px 9px;
+  color: #fffde4;
+  font-size: 21px;
+  margin: 0 7px;
+}
+
+@keyframes pulse-pop {
+  0% { transform: scale(1); box-shadow: 0 0 12px #ffb30044; }
+  50% { transform: scale(1.035); box-shadow: 0 0 28px #ff9800cc, 0 4px 28px #ffb30033; }
+  100% { transform: scale(1); }
+}
+@keyframes spin-flash {
+  0% { transform: rotate(-7deg);}
+  50% { transform: rotate(7deg);}
+  100% { transform: rotate(-7deg);}
+}
+
+/*Descuentos CSS*/
+    </style>
+
+
+</head>
+
+<body>
+
+    <nav class="navbar navbar-expand-lg navbar-light bg-light text-center" style="display: block;">
+
+        <span class="navbar-text">
+            <!-- Example single danger button -->
+            <div class="btn-group">
+                <a href="#" class="dr$conwn-toggle" data-bs-toggle="dr$conwn" aria-expanded="false">
+                    <?php echo 'Bienvenido ' . $_SESSION['idusuario'] ?>
+                </a>
+                <ul class="dr$conwn-menu">
+                    <li><a class="dr$conwn-item" href="logout.php?cerrar=1">Cerrar Sesión</a></li>
+                </ul>
+
+                <?php
+                    if ($_SESSION['idusuario'] == "ADMIN")
+                    {
+                        ?>
+                            <ul class="dr$conwn-menu">
+                                <li><a href='usuarios.php' class="dr$conwn-item">Lista de Usuarios</a></li>
+                            </ul>
+  <ul class="dr$conwn-menu">
+                                <li><a href='bajarotacion.php' class="dr$conwn-item">Baja Rotacion (ADMIN)</a></li>
+                            </ul>
+ 
+                            <ul class="dr$conwn-menu">
+                                <li><a href='consulta_inventario_admin.php' class="dr$conwn-item">Consultar Inventario (ADMIN)</a></li>
+                            </ul>
+                        <?php
+                    }
+
+                    
+                ?>
+            </div>
+            </div>
+
+        </span>
+
+
+    </nav>
+
+    <h1 class="text-center mb-4">Consulta de Precios</h1>
+
+    <div class="container">
+        <div class="">
+        
+       <form method="POST" action="<?php echo htmlspecialchars($_SERVER["PHP_SELF"]); ?>">
+            <div class="form-group">
+                <label for="tipo_busqueda">Buscar por:</label>
+                <div>
+                    <input type="radio" id="referencia" name="tipo_busqueda" value="referencia" 
+                    <?php echo  ((!isset($_POST['tipo_busqueda']) && !isset($_GET['tipo_busqueda'])) || $_POST['tipo_busqueda'] == 'referencia') ? 'checked' : ''; ?> 
+                    onclick="cambiarBusqueda()"> 
+
+                    <label for="referencia">Referencia</label>
+                    <input type="radio" id="descripcion" name="tipo_busqueda" value="descripcion" 
+                    <?php echo ((isset($_POST['tipo_busqueda']) || isset($_GET['tipo_busqueda']))  && ($_POST['tipo_busqueda'] == 'descripcion' || $_GET['tipo_busqueda'] == 'descripcion')) ? 'checked' : ''; ?>
+                    onclick="cambiarBusqueda()"> 
+                    <label for="descripcion">Descripción</label>
+                </div>
+
+            </div>
+            
+            <!-- Campo de búsqueda por referencia -->
+            <div class="form-group" id="referencia_group">
+                <input autofocus type="text" class="form-control" name="referencia" id="referencia" placeholder="Escribe una referencia..." required>
+            </div>
+            
+            <!-- Campo de búsqueda por descripción (oculto por defecto) -->
+            <div class="form-group" id="descripcion_group" style="display:none;">
+                <input autofocus type="text" class="form-control" name="descripcion" id="descripcion" placeholder="Escribe una descripcion..." required>
+            </div>
+
+            <div>
+                <button type="submit" name="buscar" class="btn btn-primary">Buscar</button>
+            </div>
+    </form>
+
+
+
+
+        </div>
+        <?php
+
+
+
+        global $resultado_alterno;
+        global $resultuse;
+        global $resultcostex;
+        global $alternos;
+        if (isset($_POST['buscar']) || isset($_GET['referencia'])) :
+
+            $tipo_busqueda = $_POST['tipo_busqueda'];
+
+            if ($tipo_busqueda == "referencia" || isset($_GET['referencia'])) :
+            
+            if ($tipo_busqueda == "referencia" )
+            {
+                $referencia = $_POST['referencia'];
+
+            }
+            else{
+
+                $referencia = $_GET['referencia'];
+
+
+            }
+            
+            
+
+            $sql = $con->prepare("SELECT * FROM inventario WHERE referencia = :referencia and Tipo='agro'");
+            $sql->execute(['referencia' => $referencia]);
+            $resultado_alterno = $sql->fetchAll();
+
+
+            $sql2 = $con->prepare("SELECT * FROM inventario WHERE referencia = :referencia and Tipo='use'");
+            $sql2->execute(['referencia' => $referencia]);
+            $resultuse = $sql2->fetchAll();
+
+            $sql3 = $con->prepare("SELECT * FROM inventario WHERE referencia = :referencia and Tipo='costex'");
+            $sql3->execute(['referencia' => $referencia]);
+            $resultcostex = $sql3->fetchAll();
+
+            if (($resultado_alterno && $sql->rowCount() > 0) || ($resultuse && $sql2->rowCount() > 0) || ($resultcostex && $sql3->rowCount() > 0)) :
+        
+                // Mostrar descuento 
+                //$descuentoInfo = getDescuentoInfo($referencia, $con); // Obtiene info del descuento
+                //renderDescuentoBox($descuentoInfo); // Muestra el aviso si hay descuento
+
+                if ($sql->rowCount() > 0 
+                && isset($resultado_alterno[0]['Existencias']) 
+                && intval($resultado_alterno[0]['Existencias']) > 0
+                ) {
+                    $descuentoInfo = getDescuentoInfo($referencia, $con);
+                    if ($descuentoInfo) {
+                        renderDescuentoBox($descuentoInfo);
+                    }
+                 }
+        
+        ?>
+                <br>
+                <table class="table modern-table table-hover" id="tablaPrincipal">
+                    <thead>
+                        <tr>
+                            <th>Referencia</th>
+                            <th>Descripción</th>
+                            <th>Disponible</th>
+                            <th>Precio Antes de IVA</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+
+                        <tr>
+
+                            <?php echo Existencias($_SESSION['idusuario'], $resultado_alterno[0], $resultuse[0], $resultcostex[0], $con);
+
+                            // $alternos=$fila['Alternos'];
+                            ?>
+
+
+                        </tr>
+
+                    </tbody>
+                </table>
+                <div class="alert alert-warning" role="alert" id="Mensaje" style="display:none;font-size:16px;">
+                    La Referencia, "<?php echo $_POST['referencia'] ?>", es un alias de la referencia principal mostrada arriba.
+                </div>
+
+                <div class="alert alert-warning" role="alert" id="MensajePrecios1" style="display:none;color:#111;background:#d7e9fb;font-size:16px;">
+                Si deseas conocer precios de la mercancia proxima a llegar, consulte con su asesor o al correo:  <a href="ventas@agro-costa.com">ventas@agro-costa.com</a>
+                </div>
+ 
+                <br />
+                <?php
+                 
+                //$arregloAlternos = explode("...", $alternos); directo lo hare con fucnion para poner las excepciones
+                global $alternos;
+                $arregloAlternos = Alternos($_SESSION['idusuario'],  $alternos, $referencia, $con);
+
+                if (!empty($arregloAlternos["alternos"]) || !empty($arregloAlternos["complementarios"]) || !empty($arregloAlternos["alias"])) {
+                    //echo $alternos.' '.strlen($alternos);
+                ?>
+        <table class="table modern-table table-hover" id="tablaPrincipal" style="border:none">
+            <caption>Ver Alternos y Complementarios</caption>
+            <thead>
+                <tr>
+                    <th>Referencia</th>
+                    <th>Descripción</th>
+                    <th>Comentario</th>
+                    <th>Tipo</th>
+                </tr>
+            </thead>
+            <tbody>
+                <?php
+                
+                foreach ($arregloAlternos['alternos'] as $valor) { 
+                    $comentario = explode("COMENTARIO:", $valor); 
+                    ?>
+                    <tr>
+                        <td><?php echo $comentario[0] ?></td>
+                        <td><?php echo $comentario[1] ?></td>
+                        <td><?php echo $comentario[2] ?></td>
+                        <td>Alterno</td>
+                    </tr>
+                <?php }
+
+                foreach ($arregloAlternos['complementarios'] as $valor) { 
+                    $comentario = explode("COMENTARIO:", $valor); 
+                    ?>
+                    <tr>
+                        <td><?php echo $comentario[0] ?></td>
+                        <td><?php echo $comentario[1] ?></td>
+                        <td><?php echo $comentario[2] ?></td>
+                        <td>Complementario</td>
+                    </tr>
+                <?php }
+
+                foreach ($arregloAlternos['alias'] as $valor) { 
+                    $comentario = explode("COMENTARIO:", $valor); 
+                    ?>
+                    <tr>
+                        <td><?php echo $comentario[0] ?></td>
+                        <td><?php echo $comentario[1] ?></td>
+                        <td>Alias</td>
+                    </tr>
+                <?php }
+                ?>
+            </tbody>
+        </table>
+                <?php }               
+                ?>
+                <?php
+                global $precio_con_descuento;
+                guardarMovimiento($_SESSION['idusuario'], $referencia, date('Y-m-d H:i:s'), $precio_con_descuento, $con); ?>
+
+           
+        <?php
+        global $Pedidos;
+        echo $Pedidos;
+        
+
+         $leyenda =  false;
+         if ($Pedidos) { 
+            $leyenda = true;
+        ?>
+         <div class="alert alert-warning" role="alert" id="MensajePrecios" style="color:#111;background:#d7e9fb;font-size:16px;">
+                Si deseas conocer precios de la mercancia proxima a llegar, consulte con su asesor o al correo:  <a href="ventas@agro-costa.com">ventas@agro-costa.com</a>
+                </div>
+            <?php };
+        ?>
+
+           
+
+ <?php else : ?>
+                <div class="alert alert-danger" role="alert">
+                    No se encontraron resultados para la referencia "<?php echo $_POST['referencia'] ?>"
+                </div>
+    
+                 <?php endif;
+         ?>
+
+        <?php
+
+                
+
+         else :
+
+                //echo "bieneeee " . $tipo_busqueda. $_POST['descripcion'];
+
+                
+                if ($tipo_busqueda == "descripcion")
+                {
+
+                    $descripcion = $_POST['descripcion'];
+
+                    // Consulta por descripción (limitada a las primeras 20 coincidencias)
+                    $sql = $con->prepare("SELECT * FROM inventario WHERE descripcion LIKE :descripcion AND Tipo<>'use' LIMIT 20");
+                    $sql->execute(['descripcion' => "%$descripcion%"]);
+                    $resultado = $sql->fetchAll();
+
+                    if ($resultado && count($resultado) > 0) {
+                        echo "<br><h4>Resultados encontrados:</h4>";
+                        echo '<div class="container mt-4">
+                        <div class="header-row row hover-row border p-2">
+                            <div class="col">Referencia</div>
+                            <div class="col">Descripcion</div>
+                        </div>';
+
+                        foreach ($resultado as $fila) {
+                        //echo "<li><a href='consulta_inventario.php?referencia=" . $fila['Referencia'] . "'>" . $fila['Referencia'] . " - " . $fila['descripcion'] . "</a></li>";
+                        echo '<a href="consulta_inventario.php?referencia='.$fila['Referencia'] . '&tipo_busqueda='.$tipo_busqueda.'"><div class="custom-row row hover-row"><div class="col">' . $fila['Referencia'] . '</div><div class="col">' . $fila['descripcion'] . '</div></div></a>';
+                        }
+                        echo "</div>";
+                    } 
+                    else {
+                        echo "<div class='alert alert-danger'>No se encontraron resultados.</div>";
+                    }
+
+            }
+            
+
+
+
+            endif;
+        endif;
+
+
+
+        ?>
+
+        
+
+
+
+
+
+
+
+
+    </div>
+
+
+
+
+    <script src="https://code.jquery.com/jquery-3.3.1.slim.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery-validate/1.19.1/jquery.validate.min.js"></script>
+    <script>
+        // Valida el formulario con jQuery Validation
+        $(document).ready(function() {
+            $("form").validate({
+                rules: {
+                    referencia: "required"
+                },
+                messages: {
+                    referencia: "Por favor ingrese la referencia del artículo"
+                }
+            });
+        });
+
+
+
+     function cambiarBusqueda() {
+    var tipoBusqueda = document.querySelector('input[name="tipo_busqueda"]:checked').value;
+
+    if (tipoBusqueda == "referencia") {
+        document.getElementById("referencia_group").style.display = "block";
+        document.getElementById("descripcion_group").style.display = "none";
+    } else if (tipoBusqueda == "descripcion") {
+        document.getElementById("referencia_group").style.display = "none";
+        document.getElementById("descripcion_group").style.display = "block";
+    }
+}
+
+// Llamar la función para inicializar la interfaz cuando la página carga
+document.addEventListener("DOMContentLoaded", function() {
+    cambiarBusqueda();
+});
+
+
+
+
+
+    </script>
+
+
+
+    
+    
+     <script>
+        // JavaScript para realizar la comparación y actualización de la fecha
+        
+/*
+        document.addEventListener("DOMContentLoaded", function() {
+        
+            // Obtener la tabla principal y los pedidos
+            var tablaPrincipal = document.getElementById('tablaPrincipal');
+            var pedidos = document.getElementById('pedidos');
+
+            // Supongamos que los datos de la tabla se pasan desde PHP y se almacenan en estas variables JavaScript
+            var tablaPrincipalData = <?php echo json_encode($tablaPrincipalData); ?>;
+            var pedidosData = <?php echo json_encode($pedidosData); ?>;
+  
+            // Función para comparar y actualizar la fecha
+            function actualizarFecha() {
+            
+             
+                // Suponiendo que la tercera celda de la segunda fila contiene la fecha en formato 'dd/mm/yyyy'
+                var fechaPedido = pedidosData[1][2]; // PedidosData es un array bidimensional
+                var disponible = tablaPrincipalData [1][2]; // tablaPrincipalData es un array bidimensional
+                
+                // Comprobar si la fecha contiene '60 DIAS'
+                
+               
+                if (disponible.includes('60 DIAS')) {
+                    // Actualizar la fecha en la tabla principal
+                    tablaPrincipalData[1][2] = fechaPedido;
+                }
+
+                // Actualizar la tabla principal en el HTML
+                actualizarTablaPrincipal();
+            }
+
+            // Función para actualizar la tabla principal en el HTML
+            function actualizarTablaPrincipal() {
+                tablaPrincipal.innerHTML = ''; // Limpiar la tabla
+
+                // Iterar sobre los datos y crear filas y celdas
+                tablaPrincipalData.forEach(function(filaData) {
+                    var fila = document.createElement('tr');
+
+                    filaData.forEach(function(celdaData) {
+                        var celda = document.createElement('td');
+                        celda.textContent = celdaData;
+                        fila.appendChild(celda);
+                    });
+
+                    tablaPrincipal.appendChild(fila);
+                });
+            }
+
+
+            // Llamar a la función para actualizar la fecha al cargar la página
+            actualizarFecha();
+        });
+        */
+        
+document.addEventListener("DOMContentLoaded", function() {
+         
+         
+        // Obtener la tabla principal y los pedidos
+        var tablaPrincipal = document.getElementById('tablaPrincipal');
+        var pedidos = document.getElementById('pedidos');
+
+if (pedidos!== null) {
+        // Obtener la fecha del pedido (segunda fila, tercera celda)
+        var fechaPedido = pedidos.rows[1].cells[3].textContent;
+         var disponible= tablaPrincipal .rows[1].cells[2].textContent;
+
+        // Comprobar si la fecha contiene '60 DIAS'
+        if (disponible.includes('60 DIAS')) {
+            // Obtener la fecha del pedido y asignarla a la tabla principal
+            tablaPrincipal.rows[1].cells[2].innerHTML="Proximo en Llegar: " + fechaPedido + '<a href="https://agro-costa.com/consulta/consulta_inventario.php#pedidos"></a>';
+            
+
+document.getElementById('MensajePrecios1').style.display = 'block' ;
+        }
+        
+        }
+    });
+        
+    </script>
+</body>
+
+</html>
+
+    

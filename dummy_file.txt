@@ -1,0 +1,59 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Ver Alternos y Complementarios</title>
+    <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.3.1/css/bootstrap.min.css">
+</head>
+<body>
+    <div class="container">
+        <h4>Ver Alternos y Complementarios:</h4>
+        <table class="table table-condensed table-bordered table-hover" id="tablaPrincipal" style="border:none">
+            <thead>
+                <tr>
+                    <th>Referencia</th>
+                    <th>Comentario</th>
+                    <th>Tipo</th>
+                </tr>
+            </thead>
+            <tbody>
+                <?php
+                global $alternos;
+                $arregloAlternos = Alternos($_SESSION['idusuario'],  $alternos);
+
+                foreach ($arregloAlternos['alternos'] as $valor) { 
+                    $comentario = explode("COMENTARIO:", $valor); 
+                    ?>
+                    <tr>
+                        <td><?php echo $comentario[0] ?></td>
+                        <td><?php echo $comentario[1] ?></td>
+                        <td>Alterno</td>
+                    </tr>
+                <?php }
+
+                foreach ($arregloAlternos['complementarios'] as $valor) { 
+                    $comentario = explode("COMENTARIO:", $valor); 
+                    ?>
+                    <tr>
+                        <td><?php echo $comentario[0] ?></td>
+                        <td><?php echo $comentario[1] ?></td>
+                        <td>Complementario</td>
+                    </tr>
+                <?php }
+
+                foreach ($arregloAlternos['alias'] as $valor) { 
+                    $comentario = explode("COMENTARIO:", $valor); 
+                    ?>
+                    <tr>
+                        <td><?php echo $comentario[0] ?></td>
+                        <td><?php echo $comentario[1] ?></td>
+                        <td>Alias</td>
+                    </tr>
+                <?php }
+                ?>
+            </tbody>
+        </table>
+    </div>
+</body>
+</html>
