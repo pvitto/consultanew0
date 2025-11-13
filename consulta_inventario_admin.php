@@ -187,258 +187,258 @@ function Existencias($usuario, $resultado_alterno, $resultuse, $resultcostex, $c
                                 </div>';*/
         }
     }
-    
-
-    // Sacando alias o use
-    if ($resultuse && !empty($resultuse) > 0 && $entra != 1) {
-        $entra = 2;
-        $fila = $resultuse;
-        if ($fila['Tipo'] == 'use') {
-            $existencias = $fila['Existencias'];
-            $precio = 0;
-        }
-
-        global $referenciaP;
-        $referenciaP = trim(substr($fila['descripcion'], 4, 100));
-        $sqlP = "SELECT * FROM inventario WHERE referencia = :referenciaP and Tipo='agro' ";
-        $stmtP = $con->prepare($sqlP);
-        $stmtP->execute(['referenciaP' => $referenciaP]);
-        $resultP = $stmtP->fetchAll();
-
-        if ($stmtP && $stmtP->rowCount() > 0) {
-            $registros = $resultP;
-            if (BloquearLineas($registros[0]['Linea'])) {
-                    return ' <table class="table modern-table table-hover" id="tablaPrincipal">
-                    <thead>
-                        <tr>
-                            <th>Referencia</th>
-                            <th>Descripción</th>
-                            <th>Bodega <br> BARRANQUILLA </th>
-                            <th>Bodega <br> BOGOTÁ</th>
-                            <th>Precio Antes de IVA</th>
-                        </tr>
-                  s</thead>
-                    <tbody>
-
-                        <tr>
-                        <td>0</td><td>0</td><td>0</td><td></td><td>$0</td> </tr>
-
-                    </tbody>
-                    </table>';
-            }
 
 
-            foreach ($registros as $fila) {
+    // Sacando alias o use
+    if ($resultuse && !empty($resultuse) > 0 && $entra != 1) {
+        $entra = 2;
+        $fila = $resultuse;
+        if ($fila['Tipo'] == 'use') {
+            $existencias = $fila['Existencias'];
+            $precio = 0;
+        }
+
+        global $referenciaP;
+        $referenciaP = trim(substr($fila['descripcion'], 4, 100));
+        $sqlP = "SELECT * FROM inventario WHERE referencia = :referenciaP and Tipo='agro' ";
+        $stmtP = $con->prepare($sqlP);
+        $stmtP->execute(['referenciaP' => $referenciaP]);
+        $resultP = $stmtP->fetchAll();
+
+        if ($stmtP && $stmtP->rowCount() > 0) {
+            $registros = $resultP;
+            if (BloquearLineas($registros[0]['Linea'])) {
+                    return ' <table class="table modern-table table-hover" id="tablaPrincipal">
+                    <thead>
+                        <tr>
+                            <th>Referencia</th>
+                            <th>Descripción</th>
+                            <th>Bodega <br> BARRANQUILLA </th>
+                            <th>Bodega <br> BOGOTÁ</th>
+                            <th>Precio Antes de IVA</th>
+                        </tr>
+                  s</thead>
+                    <tbody>
+
+                        <tr>
+                        <td>0</td><td>0</td><td>0</td><td></td><td>$0</td> </tr>
+
+                    </tbody>
+                    </table>';
+            }
 
 
-            if (($fila['Existencias'] + $fila['Existencias_bog']) > '0' && $fila['Tipo'] == 'agro') {
-                $existencias = $fila['Existencias'];
-                $existencias_bog = $fila['Existencias_bog'];
-
-            } elseif (($fila['Existencias'] + $fila['Existencias_bog']) > '0' && $fila['Tipo'] == 'costex') {
-                $existencias = 'ESTE REPUESTO ESTA PARA IMPORTACION. ENTREGA: 5-7 DIAS';
-                $existencias_bog = 0;
-
-            } elseif (($fila['Existencias'] + $fila['Existencias_bog']) < '1' && $fila['Tipo'] == 'agro') {
-                $existencias = 'IMPORTACION - TIEMPO DE ENTREGA: 60 DIAS';
-                $existencias_bog = 0;
-                $precio = 0;
-            }
-
-            $referenciap = $fila['Referencia'];
-            $descripcion = $fila['descripcion'];
-            $linea = (int)$fila['Linea'];
-            global $alternos, $descuento;
-
-            $descuento = $_SESSION['D' . $linea];
-            global $precio_con_descuento;
-            $precio_con_descuento = 0;
-
-            if (!BloquearLineas($fila['Linea'])) {
-                $alternos = $fila['Alternos'];
-            }
-    
-            
-            if (!BloquearLineas($fila['Linea'], 'precio'))
-            {
-                $precio = $fila['Precio'];
-                $precio_con_descuento = round($precio - ($precio * $descuento / 100));
-            }
-            
-            $consulta .= '<table class="table modern-table table-hover" id="tablaPrincipal">
-
-           <caption style="background-color:#b2dcff;font-weight:bold"">Consulta de Inventario</caption>
-
-                    <thead>
-                        <tr>
-                            <th>Referencia</th>
-                            <th>Descripción</th>
-                            <th>Bodega <br> BARRANQUILLA </th>
-                            <th>Bodega <br> BOGOTÁ</th>
-                            <th>Precio Antes de IVA</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-            <tr>
-            <td>' . $referenciap . '</td><td>' . $descripcion . '</td><td>' . $existencias . '</td><td>' . $existencias_bog . '</td><td>$' . number_format($precio_con_descuento, 0, '.', ',') . '</td>
-            </tr>
-
-                    </tbody>
-                    </table>
-                    
-                    <div class="alert alert-warning" role="alert" id="Mensaje" style="display:none;font-size:16px;">
-                    La Referencia,'. $referencia.', Equivale en Agro-Costa a la referencia '.$referenciaP.'.
-                </div>';
+            foreach ($registros as $fila) {
 
 
+            if (($fila['Existencias'] + $fila['Existencias_bog']) > '0' && $fila['Tipo'] == 'agro') {
+                $existencias = $fila['Existencias'];
+                $existencias_bog = $fila['Existencias_bog'];
+
+            } elseif (($fila['Existencias'] + $fila['Existencias_bog']) > '0' && $fila['Tipo'] == 'costex') {
+                $existencias = 'ESTE REPUESTO ESTA PARA IMPORTACION. ENTREGA: 5-7 DIAS';
+                $existencias_bog = 0;
+
+            } elseif (($fila['Existencias'] + $fila['Existencias_bog']) < '1' && $fila['Tipo'] == 'agro') {
+                $existencias = 'IMPORTACION - TIEMPO DE ENTREGA: 60 DIAS';
+                $existencias_bog = 0;
+                $precio = 0;
+            }
+
+            $referenciap = $fila['Referencia'];
+            $descripcion = $fila['descripcion'];
+            $linea = (int)$fila['Linea'];
+            global $alternos, $descuento;
+
+            $descuento = $_SESSION['D' . $linea];
+            global $precio_con_descuento;
+            $precio_con_descuento = 0;
+
+            if (!BloquearLineas($fila['Linea'])) {
+                $alternos = $fila['Alternos'];
+            }
 
 
-                     if (($fila['Existencias'] + $fila['Existencias_bog'])  < '1' && $fila['Tipo'] == 'agro') {
+            if (!BloquearLineas($fila['Linea'], 'precio'))
+            {
+                $precio = $fila['Precio'];
+                $precio_con_descuento = round($precio - ($precio * $descuento / 100));
+            }
 
-                       $consulta.= '<br>'. ExistenciasCostex($resultcostex, $referencia);
+            $consulta .= '<table class="table modern-table table-hover" id="tablaPrincipal">
 
-                    }
+           <caption style="background-color:#b2dcff;font-weight:bold"">Consulta de Inventario</caption>
+
+                    <thead>
+                        <tr>
+                            <th>Referencia</th>
+                            <th>Descripción</th>
+                            <th>Bodega <br> BARRANQUILLA </th>
+                            <th>Bodega <br> BOGOTÁ</th>
+                            <th>Precio Antes de IVA</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+            <tr>
+            <td>' . $referenciap . '</td><td>' . $descripcion . '</td><td>' . $existencias . '</td><td>' . $existencias_bog . '</td><td>$' . number_format($precio_con_descuento, 0, '.', ',') . '</td>
+            </tr>
+
+                    </tbody>
+                    </table>
+
+                    <div class="alert alert-warning" role="alert" id="Mensaje" style="display:none;font-size:16px;">
+                    La Referencia,'. $referencia.', Equivale en Agro-Costa a la referencia '.$referenciaP.'.
+                </div>';
 
 
 
 
-            }
+                     if (($fila['Existencias'] + $fila['Existencias_bog'])  < '1' && $fila['Tipo'] == 'agro') {
 
-            
+                       $consulta.= '<br>'. ExistenciasCostex($resultcostex, $referencia);
 
-
-            
-
-            if ($precio == 0) {
-                /*$consulta .= '<div class="alert alert-warning" role="alert" id="MensajePrecioBloqueado" style="color:#111;background:#d7e9fb;font-size:16px;">
-                              Si deseas conocer precios de esta mercancia, consulte con su asesor o al correo:  
-                              <a href="ventas@agro-costa.com">ventas@agro-costa.com</a>
-                              </div>';*/
-            }
-
-            echo "<script>window.onload = function() {";
-            echo "var x = document.getElementById('Mensaje');";
-            echo "x.style.display = 'block';";
-            echo "}</script>";
-        } else {
-            $referenciap = $fila['Referencia'];
-            $descripcion = $fila['descripcion'];
-            $linea = $fila['Linea'];
-            global $alternos;
-
-            
-            $descuento = $_SESSION['D' . $linea];
-            global $precio_con_descuento;
-            $precio_con_descuento = 0;
-
-            if (!BloquearLineas($fila['Linea'])) {
-                $alternos = $fila['Alternos'];
-            }
-    
-            
-            if (!BloquearLineas($fila['Linea'], 'precio'))
-            {
-                $precio = $fila['Precio'];
-                $precio_con_descuento = round($precio - ($precio * $descuento / 100));
-            }
+                    }
 
 
-            $consulta = '<table class="table modern-table table-hover" id="tablaPrincipal">
-            <caption style="background-color:#b2dcff;font-weight:bold"">Consulta de Inventario</caption>
-            
-                    <thead>
-                        <tr>
-                            <th>Referencia</th>
-                            <th>Descripción</th>
-                            <th>Bodega <br> BARRANQUILLA </th>
-                            <th>Bodega <br> BOGOTÁ</th>
-                            <th>Precio Antes de IVA</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-            <tr>
-            <td>' . $referenciap . '</td><td>' . $descripcion . '</td><td>' . $existencias . '</td><td>' . $existencias_bog . '</td><td>$' . number_format($precio_con_descuento, 0, '.', ',') . '</td>
-             </tr>
-
-                    </tbody>
-                    </table>
-                    <div class="alert alert-warning" role="alert" id="Mensaje" style="display:none;font-size:16px;">
-                    La Referencia,'. $referencia.', Equivale en Agro-Costa a la referencia '.$referenciaP.'.
-                </div>';
-
-            if ($precio == 0) {
-                /*$consulta .= '<div class="alert alert-warning" role="alert" id="MensajePrecioBloqueado" style="color:#111;background:#d7e9fb;font-size:16px;">
-                              Si deseas conocer precios de esta mercancia, consulte con su asesor o al correo:  
-                              <a href="ventas@agro-costa.com">ventas@agro-costa.com</a>
-                              </div>';*/
-            }
-        }
-        
-    }
-
-    // Sacando item de costex
-    if ($resultcostex && !empty($resultcostex) > 0 && $entra != 2 && $entra != 1) {
-        $entra = 3;
-        $fila = $resultcostex;
-       
-         
-
-             $consulta.= ExistenciasCostex($resultcostex, $referencia);
-
-          
-    }
-
-    // Pedidos sacando
-    global $Pedidos;
-    global $descuento;
-    global $precio_con_descuento;
-    $sqlPedidos = "SELECT * FROM pedidos a inner join inventario b on a.referencia=b.Referencia left join marcas c on c.proveedor=a.proveedor WHERE a.referencia = :referencia AND Tipo='agro' order by a.FechaPedido ASC";
-    $stmtPedidos = $con->prepare($sqlPedidos);
-
-    if ($entra=='2')
-    {$stmtPedidos->execute(['referencia' => $referenciaP]);}
-    else
-    {$stmtPedidos->execute(['referencia' => $referencia]); }
-    
-
-    if ($stmtPedidos && $stmtPedidos->rowCount() > 0) {
-        $Pedidos = '<table class="table modern-table table-hover" id="pedidos">
-                    <caption style="font-weight:bold">Proximos en Llegar</caption>           
-                    <thead>
-                        <tr>
-                            <th>Pedido</th>
-                            <th>Referencia</th>
-                            <th>Cantidad</th>
-                            <th>Fecha de Llegada(Aproximada)</th>
-                            <th>Marca</th>
-                            <th>Precio Antes de IVA</th>
-
-                        </tr>
-                    </thead>
-                    <tbody>';
-
-        while ($fila = $stmtPedidos->fetch(PDO::FETCH_ASSOC)) {
-           // $precioPedido = 0;
-            $precioPedido = PreciosPedidos($fila['Proveedor'], $fila['Moneda'], $fila['Costo'], $fila['Linea'] ,$descuento);
-            if($precioPedido<$precio_con_descuento){
-
-                $precioPedido=$precio_con_descuento;
 
 
-            }
+            }
 
-            // Formatear la fecha al formato deseado: Y-m-d (2025-Nov-20 no 2025-11-20) con mes abreviado en letras
-            $fecha= $fila['FechaPedido'];
-            $date = new DateTime($fecha);
-            $fecha = $date->format('d-M-Y');
 
-            $Pedidos .= '<tr><td>' . $fila['IdPedido'] . '</td><td>' . $fila['referencia'] . '</td><td>' . $fila['Cantidad'] . '</td><td>' . $fecha . '</td><td>' . $fila['Marca'] . '</td> <td>' .'$'. number_format($precioPedido,  0, '.', ',').'</td> </tr>';
-        }
 
-        $Pedidos .= '</tbody></table>';
-    }
 
-    return $consulta;
+
+
+            if ($precio == 0) {
+                /*$consulta .= '<div class="alert alert-warning" role="alert" id="MensajePrecioBloqueado" style="color:#111;background:#d7e9fb;font-size:16px;">
+                              Si deseas conocer precios de esta mercancia, consulte con su asesor o al correo:
+                              <a href="ventas@agro-costa.com">ventas@agro-costa.com</a>
+                              </div>';*/
+            }
+
+            echo "<script>window.onload = function() {";
+            echo "var x = document.getElementById('Mensaje');";
+            echo "x.style.display = 'block';";
+            echo "}</script>";
+        } else {
+            $referenciap = $fila['Referencia'];
+            $descripcion = $fila['descripcion'];
+            $linea = $fila['Linea'];
+            global $alternos;
+
+
+            $descuento = $_SESSION['D' . $linea];
+            global $precio_con_descuento;
+            $precio_con_descuento = 0;
+
+            if (!BloquearLineas($fila['Linea'])) {
+                $alternos = $fila['Alternos'];
+            }
+
+
+            if (!BloquearLineas($fila['Linea'], 'precio'))
+            {
+                $precio = $fila['Precio'];
+                $precio_con_descuento = round($precio - ($precio * $descuento / 100));
+            }
+
+
+            $consulta = '<table class="table modern-table table-hover" id="tablaPrincipal">
+            <caption style="background-color:#b2dcff;font-weight:bold"">Consulta de Inventario</caption>
+
+                    <thead>
+                        <tr>
+                            <th>Referencia</th>
+                            <th>Descripción</th>
+                            <th>Bodega <br> BARRANQUILLA </th>
+                            <th>Bodega <br> BOGOTÁ</th>
+                            <th>Precio Antes de IVA</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+            <tr>
+            <td>' . $referenciap . '</td><td>' . $descripcion . '</td><td>' . $existencias . '</td><td>' . $existencias_bog . '</td><td>$' . number_format($precio_con_descuento, 0, '.', ',') . '</td>
+             </tr>
+
+                    </tbody>
+                    </table>
+                    <div class="alert alert-warning" role="alert" id="Mensaje" style="display:none;font-size:16px;">
+                    La Referencia,'. $referencia.', Equivale en Agro-Costa a la referencia '.$referenciaP.'.
+                </div>';
+
+            if ($precio == 0) {
+                /*$consulta .= '<div class="alert alert-warning" role="alert" id="MensajePrecioBloqueado" style="color:#111;background:#d7e9fb;font-size:16px;">
+                              Si deseas conocer precios de esta mercancia, consulte con su asesor o al correo:
+                              <a href="ventas@agro-costa.com">ventas@agro-costa.com</a>
+                              </div>';*/
+            }
+        }
+
+    }
+
+    // Sacando item de costex
+    if ($resultcostex && !empty($resultcostex) > 0 && $entra != 2 && $entra != 1) {
+        $entra = 3;
+        $fila = $resultcostex;
+
+
+
+             $consulta.= ExistenciasCostex($resultcostex, $referencia);
+
+
+    }
+
+    // Pedidos sacando
+    global $Pedidos;
+    global $descuento;
+    global $precio_con_descuento;
+    $sqlPedidos = "SELECT * FROM pedidos a inner join inventario b on a.referencia=b.Referencia left join marcas c on c.proveedor=a.proveedor WHERE a.referencia = :referencia AND Tipo='agro' order by a.FechaPedido ASC";
+    $stmtPedidos = $con->prepare($sqlPedidos);
+
+    if ($entra=='2')
+    {$stmtPedidos->execute(['referencia' => $referenciaP]);}
+    else
+    {$stmtPedidos->execute(['referencia' => $referencia]); }
+
+
+    if ($stmtPedidos && $stmtPedidos->rowCount() > 0) {
+        $Pedidos = '<table class="table modern-table table-hover" id="pedidos">
+                    <caption style="font-weight:bold">Proximos en Llegar</caption>
+                    <thead>
+                        <tr>
+                            <th>Pedido</th>
+                            <th>Referencia</th>
+                            <th>Cantidad</th>
+                            <th>Fecha de Llegada(Aproximada)</th>
+                            <th>Marca</th>
+                            <th>Precio Antes de IVA</th>
+
+                        </tr>
+                    </thead>
+                    <tbody>';
+
+        while ($fila = $stmtPedidos->fetch(PDO::FETCH_ASSOC)) {
+           // $precioPedido = 0;
+            $precioPedido = PreciosPedidos($fila['Proveedor'], $fila['Moneda'], $fila['Costo'], $fila['Linea'] ,$descuento);
+            if($precioPedido<$precio_con_descuento){
+
+                $precioPedido=$precio_con_descuento;
+
+
+            }
+
+            // Formatear la fecha al formato deseado: Y-m-d (2025-Nov-20 no 2025-11-20) con mes abreviado en letras
+            $fecha= $fila['FechaPedido'];
+            $date = new DateTime($fecha);
+            $fecha = $date->format('d-M-Y');
+
+            $Pedidos .= '<tr><td>' . $fila['IdPedido'] . '</td><td>' . $fila['referencia'] . '</td><td>' . $fila['Cantidad'] . '</td><td>' . $fecha . '</td><td>' . $fila['Marca'] . '</td> <td>' .'$'. number_format($precioPedido,  0, '.', ',').'</td> </tr>';
+        }
+
+        $Pedidos .= '</tbody></table>';
+    }
+
+    return $consulta;
 }
 
 ?>
@@ -734,22 +734,22 @@ function Existencias($usuario, $resultado_alterno, $resultuse, $resultcostex, $c
             $referencia = $_POST['referencia'];
             $idUsuario = $_POST['usuario'];
 // --- Cargar descuentos del USUARIO SELECCIONADO en la sesión ---
-            // Esto es para que las funciones de 'consulta_inventario.php' funcionen sin cambios.
-            $sql_descuentos = $con->prepare("SELECT * FROM usuarios WHERE Idusuario = :usuario LIMIT 1");
-            $sql_descuentos->execute(['usuario' => $idUsuario]);
-            $descuentos_usuario = $sql_descuentos->fetch(PDO::FETCH_ASSOC);
-            
-            if ($descuentos_usuario) {
-                foreach ($descuentos_usuario as $key => $value) {
-                    // Cargar solo las columnas de descuento (ej: d1, d2, d100)
-                    if (strpos($key, 'd') === 0 && is_numeric(substr($key, 1))) {
-                        // Importante: El user file usa 'D' mayúscula en la sesión
-                        $session_key = 'D' . substr($key, 1);
-                        $_SESSION[$session_key] = $value;
-                    }
-                }
-            }
-            // --- Fin de la carga de descuentos ---
+            // Esto es para que las funciones de 'consulta_inventario.php' funcionen sin cambios.
+            $sql_descuentos = $con->prepare("SELECT * FROM usuarios WHERE Idusuario = :usuario LIMIT 1");
+            $sql_descuentos->execute(['usuario' => $idUsuario]);
+            $descuentos_usuario = $sql_descuentos->fetch(PDO::FETCH_ASSOC);
+
+            if ($descuentos_usuario) {
+                foreach ($descuentos_usuario as $key => $value) {
+                    // Cargar solo las columnas de descuento (ej: d1, d2, d100)
+                    if (strpos($key, 'd') === 0 && is_numeric(substr($key, 1))) {
+                        // Importante: El user file usa 'D' mayúscula en la sesión
+                        $session_key = 'D' . substr($key, 1);
+                        $_SESSION[$session_key] = $value;
+                    }
+                }
+            }
+            // --- Fin de la carga de descuentos ---
             $_SESSION['selected_usuario'] = $idUsuario;
 
             $sql = $con->prepare("SELECT * FROM inventario WHERE referencia = :referencia and Tipo='agro'");
@@ -813,159 +813,159 @@ function Existencias($usuario, $resultado_alterno, $resultuse, $resultcostex, $c
                 ?>
   
        <?php
-                // global $alternos; // Esta variable ya fue declarada y usada arriba
-                $arregloAlternos = Alternos($idUsuario,  $alternos, $referencia, $con);
+                // global $alternos; // Esta variable ya fue declarada y usada arriba
+                $arregloAlternos = Alternos($idUsuario,  $alternos, $referencia, $con);
 
-                // Revisa si hay alternos O complementarios para mostrar
-                if (!empty($arregloAlternos["alternos"]) || !empty($arregloAlternos["complementarios"])) {
-            ?>
-            
-                        <div class="container mt-4">
-                
-                                <div class="header-row row hover-row border p-2" style="font-weight:800; text-align:center;background-color: #b2dcff;">
-                    <div class="col"><h4>Ver Alternos y Complementarios</h4></div>
-                </div>
-                
-                                <div class="header-row row hover-row border p-2" style="color: #0d6efd;font-weight: 600;font-size: 14px;padding: 5px 15px !important;vertical-align: middle !important;background-color: #e9f2ff; border-bottom: 2px solid #dee2e6;text-align: center; border-bottom: 2px solid #dee2e6 !important;">
-                    <div class="col">Referencia</div>
-                    <div class="col">Descripción</div>
-                    <div class="col">Comentario</div>
-                    <div class="col">Tipo</div>
-                    <div class="col">Bod. BAQ</div>
-                    <div class="col">Bod. BOG</div>
-                    <div class="col">Precio</div>
-                </div>
+                // Revisa si hay alternos O complementarios para mostrar
+                if (!empty($arregloAlternos["alternos"]) || !empty($arregloAlternos["complementarios"])) {
+            ?>
 
-            <?php
-                // --- INICIO LOOP ALTERNOS ---
-                foreach ($arregloAlternos['alternos'] as $valor) { 
-                    $comentario = explode("COMENTARIO:", $valor);
-                    
-                    // Asignamos variables con seguridad (trim y ?? '')
-                    $ref_alterno = trim($comentario[0] ?? '');
-                    $desc_alterno_comentario = trim($comentario[1] ?? ''); // Descripción del comentario
-                    $com_alterno = trim($comentario[2] ?? ''); // Comentario adicional
+                        <div class="container mt-4">
 
-                    $existenciasAlterno = 0; 
-                    $precioAlterno = 0;
-                    $lineaAlterno;
-                    $mensaje;
-                    $existencias_baq = 0;
-                    $existencias_bog = 0;
-                    $desc_alterno_db = $desc_alterno_comentario; // Usar la del comentario por defecto
+                                <div class="header-row row hover-row border p-2" style="font-weight:800; text-align:center;background-color: #b2dcff;">
+                    <div class="col"><h4>Ver Alternos y Complementarios</h4></div>
+                </div>
 
-                    $sql = $con->prepare("SELECT * FROM inventario WHERE referencia = :referencia and Tipo='agro' ");
-                    $sql->execute(['referencia' => $ref_alterno]);
-                    $resultado = $sql->fetchAll();
+                                <div class="header-row row hover-row border p-2" style="color: #0d6efd;font-weight: 600;font-size: 14px;padding: 5px 15px !important;vertical-align: middle !important;background-color: #e9f2ff; border-bottom: 2px solid #dee2e6;text-align: center; border-bottom: 2px solid #dee2e6 !important;">
+                    <div class="col">Referencia</div>
+                    <div class="col">Descripción</div>
+                    <div class="col">Comentario</div>
+                    <div class="col">Tipo</div>
+                    <div class="col">Bod. BAQ</div>
+                    <div class="col">Bod. BOG</div>
+                    <div class="col">Precio</div>
+                </div>
 
-                    if ($resultado && count($resultado) > 0) {
-                        foreach ($resultado as $fila) {
-                            $precioAlterno =  $fila['Precio'];
-                            $existenciasAlterno = $fila['Existencias'] + $fila['Existencias_bog'];
-                            $existencias_baq= $fila['Existencias'];
-                            $existencias_bog =$fila['Existencias_bog'];
-                            $lineaAlterno = $fila['Linea'];
-                            
-                            // Si la descripción del comentario está vacía, usamos la de la BD
-                            if (empty($desc_alterno_db)) {
-                                $desc_alterno_db = $fila['descripcion'];
-                            }
-                        }
-                    } 
+            <?php
+                // --- INICIO LOOP ALTERNOS ---
+                foreach ($arregloAlternos['alternos'] as $valor) {
+                    $comentario = explode("COMENTARIO:", $valor);
 
-                    if ($existenciasAlterno > 0) {
-                        if (isset($lineaAlterno)) { // Asegurarse que la línea exista
-                            $descuento = $_SESSION['D' . $lineaAlterno];
-                            $precioAlterno = round($precioAlterno - ($precioAlterno * $descuento / 100));
-                            $mensaje =  '$'.number_format($precioAlterno , 0, '.', ',');
-                        } else {
-                            $mensaje = '$0'; // Caso borde si no se encontró línea
-                        }
-                    } else {
-                        // Ya no es un link, porque la FILA ENTERA es el link.
-                        $mensaje = '<button type="button" class="btn btn-primary" style="font-size: 12px; padding: 5px 5px;">Ver pedidos</button>';
-                    }
-                ?>
-                                        <a href="consulta_inventario_admin.php?referencia=<?php echo $ref_alterno; ?>&usuario=<?php echo $idUsuario; ?>&buscar=">
-                        <div class="custom-row row hover-row" style="text-align: center;">
-                            <div class="col"><?php echo $ref_alterno; ?></div>
-                            <div class="col"><?php echo $desc_alterno_db; ?></div>
-                            <div class="col"><?php echo $com_alterno; ?></div>
-                            <div class="col">Alterno</div>
-                            <div class="col"><?php echo $existencias_baq; ?></div>
-                            <div class="col"><?php echo $existencias_bog; ?></div>
-                            <div class="col"><?php echo $mensaje; ?></div>
-                        </div>
-                    </a>
-            <?php 
-                } // --- FIN LOOP ALTERNOS ---
+                    // Asignamos variables con seguridad (trim y ?? '')
+                    $ref_alterno = trim($comentario[0] ?? '');
+                    $desc_alterno_comentario = trim($comentario[1] ?? ''); // Descripción del comentario
+                    $com_alterno = trim($comentario[2] ?? ''); // Comentario adicional
 
-                // --- INICIO LOOP COMPLEMENTARIOS ---
-                foreach ($arregloAlternos['complementarios'] as $valor) { 
-                    $comentario = explode("COMENTARIO:", $valor);
+                    $existenciasAlterno = 0;
+                    $precioAlterno = 0;
+                    $lineaAlterno;
+                    $mensaje;
+                    $existencias_baq = 0;
+                    $existencias_bog = 0;
+                    $desc_alterno_db = $desc_alterno_comentario; // Usar la del comentario por defecto
 
-                    // Asignamos variables con seguridad (trim y ?? '')
-                    $ref_alterno = trim($comentario[0] ?? '');
-                    $desc_alterno_comentario = trim($comentario[1] ?? ''); // Descripción del comentario
-                    $com_alterno = trim($comentario[2] ?? ''); // Comentario adicional
-                    
-                    $existenciasAlterno = 0; 
-                    $precioAlterno = 0;
-                    $lineaAlterno;
-                    $mensaje;
-                    $existencias_baq = 0;
-                    $existencias_bog = 0;
-                    $desc_alterno_db = $desc_alterno_comentario; // Usar la del comentario por defecto
+                    $sql = $con->prepare("SELECT * FROM inventario WHERE referencia = :referencia and Tipo='agro' ");
+                    $sql->execute(['referencia' => $ref_alterno]);
+                    $resultado = $sql->fetchAll();
 
-                    $sql = $con->prepare("SELECT * FROM inventario WHERE referencia = :referencia and Tipo='agro' ");
-                    $sql->execute(['referencia' => $ref_alterno]);
-                    $resultado = $sql->fetchAll();
+                    if ($resultado && count($resultado) > 0) {
+                        foreach ($resultado as $fila) {
+                            $precioAlterno =  $fila['Precio'];
+                            $existenciasAlterno = $fila['Existencias'] + $fila['Existencias_bog'];
+                            $existencias_baq= $fila['Existencias'];
+                            $existencias_bog =$fila['Existencias_bog'];
+                            $lineaAlterno = $fila['Linea'];
 
-                    if ($resultado && count($resultado) > 0) {
-                        foreach ($resultado as $fila) {
-                            $precioAlterno =  $fila['Precio'];
-                            $existenciasAlterno = $fila['Existencias'] + $fila['Existencias_bog'];
-                            $existencias_baq= $fila['Existencias'];
-                            $existencias_bog =$fila['Existencias_bog'];
-                            $lineaAlterno = $fila['Linea'];
+                            // Si la descripción del comentario está vacía, usamos la de la BD
+                            if (empty($desc_alterno_db)) {
+                                $desc_alterno_db = $fila['descripcion'];
+                            }
+                        }
+                    }
 
-                            // Si la descripción del comentario está vacía, usamos la de la BD
-                            if (empty($desc_alterno_db)) {
-                                $desc_alterno_db = $fila['descripcion'];
-                            }
-                        }
-                    } 
+                    if ($existenciasAlterno > 0) {
+                        if (isset($lineaAlterno)) { // Asegurarse que la línea exista
+                            $descuento = $_SESSION['D' . $lineaAlterno];
+                            $precioAlterno = round($precioAlterno - ($precioAlterno * $descuento / 100));
+                            $mensaje =  '$'.number_format($precioAlterno , 0, '.', ',');
+                        } else {
+                            $mensaje = '$0'; // Caso borde si no se encontró línea
+                        }
+                    } else {
+                        // Ya no es un link, porque la FILA ENTERA es el link.
+                        $mensaje = '<button type="button" class="btn btn-primary" style="font-size: 12px; padding: 5px 5px;">Ver pedidos</button>';
+                    }
+                ?>
+                                        <a href="consulta_inventario_admin.php?referencia=<?php echo $ref_alterno; ?>&usuario=<?php echo $idUsuario; ?>&buscar=">
+                        <div class="custom-row row hover-row" style="text-align: center;">
+                            <div class="col"><?php echo $ref_alterno; ?></div>
+                            <div class="col"><?php echo $desc_alterno_db; ?></div>
+                            <div class="col"><?php echo $com_alterno; ?></div>
+                            <div class="col">Alterno</div>
+                            <div class="col"><?php echo $existencias_baq; ?></div>
+                            <div class="col"><?php echo $existencias_bog; ?></div>
+                            <div class="col"><?php echo $mensaje; ?></div>
+                        </div>
+                    </a>
+            <?php
+                } // --- FIN LOOP ALTERNOS ---
 
-                    if ($existenciasAlterno > 0) {
-                         if (isset($lineaAlterno)) { // Asegurarse que la línea exista
-                            $descuento = $_SESSION['D' . $lineaAlterno];
-                            $precioAlterno = round($precioAlterno - ($precioAlterno * $descuento / 100));
-                            $mensaje =  '$'.number_format($precioAlterno , 0, '.', ',');
-                        } else {
-                            $mensaje = '$0'; // Caso borde si no se encontró línea
-                        }
-                    } else {
-                        // Ya no es un link, porque la FILA ENTERA es el link.
-                        $mensaje = '<button type="button" class="btn btn-primary" style="font-size: 12px; padding: 5px 5px;">Ver pedidos</button>';
-                    }
-            ?>
-                                        <a href="consulta_inventario_admin.php?referencia=<?php echo $ref_alterno; ?>&usuario=<?php echo $idUsuario; ?>&buscar=">
-                        <div class="custom-row row hover-row" style="text-align: center;">
-                            <div class="col"><?php echo $ref_alterno; ?></div>
-                            <div class="col"><?php echo $desc_alterno_db; ?></div>
-                            <div class="col"><?php echo $com_alterno; ?></div>
-                            <div class="col">Complementario</div>
-                            <div class="col"><?php echo $existencias_baq; ?></div>
-                            <div class="col"><?php echo $existencias_bog; ?></div>
-                            <div class="col"><?php echo $mensaje; ?></div>
-                        </div>
-                    </a>
-            <?php 
-                } // --- FIN LOOP COMPLEMENTARIOS ---
-            ?>
-            </div>         <?php 
-                } // --- FIN if (!empty($arregloAlternos...)) ---
-                ?>
+                // --- INICIO LOOP COMPLEMENTARIOS ---
+                foreach ($arregloAlternos['complementarios'] as $valor) {
+                    $comentario = explode("COMENTARIO:", $valor);
+
+                    // Asignamos variables con seguridad (trim y ?? '')
+                    $ref_alterno = trim($comentario[0] ?? '');
+                    $desc_alterno_comentario = trim($comentario[1] ?? ''); // Descripción del comentario
+                    $com_alterno = trim($comentario[2] ?? ''); // Comentario adicional
+
+                    $existenciasAlterno = 0;
+                    $precioAlterno = 0;
+                    $lineaAlterno;
+                    $mensaje;
+                    $existencias_baq = 0;
+                    $existencias_bog = 0;
+                    $desc_alterno_db = $desc_alterno_comentario; // Usar la del comentario por defecto
+
+                    $sql = $con->prepare("SELECT * FROM inventario WHERE referencia = :referencia and Tipo='agro' ");
+                    $sql->execute(['referencia' => $ref_alterno]);
+                    $resultado = $sql->fetchAll();
+
+                    if ($resultado && count($resultado) > 0) {
+                        foreach ($resultado as $fila) {
+                            $precioAlterno =  $fila['Precio'];
+                            $existenciasAlterno = $fila['Existencias'] + $fila['Existencias_bog'];
+                            $existencias_baq= $fila['Existencias'];
+                            $existencias_bog =$fila['Existencias_bog'];
+                            $lineaAlterno = $fila['Linea'];
+
+                            // Si la descripción del comentario está vacía, usamos la de la BD
+                            if (empty($desc_alterno_db)) {
+                                $desc_alterno_db = $fila['descripcion'];
+                            }
+                        }
+                    }
+
+                    if ($existenciasAlterno > 0) {
+                         if (isset($lineaAlterno)) { // Asegurarse que la línea exista
+                            $descuento = $_SESSION['D' . $lineaAlterno];
+                            $precioAlterno = round($precioAlterno - ($precioAlterno * $descuento / 100));
+                            $mensaje =  '$'.number_format($precioAlterno , 0, '.', ',');
+                        } else {
+                            $mensaje = '$0'; // Caso borde si no se encontró línea
+                        }
+                    } else {
+                        // Ya no es un link, porque la FILA ENTERA es el link.
+                        $mensaje = '<button type="button" class="btn btn-primary" style="font-size: 12px; padding: 5px 5px;">Ver pedidos</button>';
+                    }
+            ?>
+                                        <a href="consulta_inventario_admin.php?referencia=<?php echo $ref_alterno; ?>&usuario=<?php echo $idUsuario; ?>&buscar=">
+                        <div class="custom-row row hover-row" style="text-align: center;">
+                            <div class="col"><?php echo $ref_alterno; ?></div>
+                            <div class="col"><?php echo $desc_alterno_db; ?></div>
+                            <div class="col"><?php echo $com_alterno; ?></div>
+                            <div class="col">Complementario</div>
+                            <div class="col"><?php echo $existencias_baq; ?></div>
+                            <div class="col"><?php echo $existencias_bog; ?></div>
+                            <div class="col"><?php echo $mensaje; ?></div>
+                        </div>
+                    </a>
+            <?php
+                } // --- FIN LOOP COMPLEMENTARIOS ---
+            ?>
+            </div>         <?php
+                } // --- FIN if (!empty($arregloAlternos...)) ---
+                ?>
             <?php };
         ?>
         
