@@ -201,7 +201,7 @@ function Existencias($usuario, $resultado_alterno, $resultuse, $resultcostex, $c
 
         global $referenciaP;
         $referenciaP = trim(substr($fila['descripcion'], 4, 100));
-        $sqlP = "SELECT inventario.*, marcas.Marca AS MarcaTexto FROM inventario LEFT JOIN marcas ON inventario.Marcas = marcas.Proveedor WHERE referencia = :referenciaP and Tipo='agro' ";
+        $sqlP = "SELECT inventario.*, marcas.Marca AS MarcaTexto FROM inventario LEFT JOIN marcas ON Marcas=Proveedor WHERE referencia = :referenciaP and Tipo='agro' ";
         $stmtP = $con->prepare($sqlP);
         $stmtP->execute(['referenciaP' => $referenciaP]);
         $resultP = $stmtP->fetchAll();
@@ -756,7 +756,7 @@ function Existencias($usuario, $resultado_alterno, $resultuse, $resultcostex, $c
             // --- Fin de la carga de descuentos ---
             $_SESSION['selected_usuario'] = $idUsuario;
 
-            $sql = $con->prepare("SELECT inventario.*, marcas.Marca AS MarcaTexto FROM inventario LEFT JOIN marcas ON inventario.Marcas = marcas.Proveedor WHERE referencia = :referencia and Tipo='agro'");
+            $sql = $con->prepare("SELECT inventario.*, marcas.Marca AS MarcaTexto FROM inventario LEFT JOIN marcas ON Marcas=Proveedor WHERE referencia = :referencia and Tipo='agro'");
             $sql->execute(['referencia' => $referencia]);
             $resultado_alterno = $sql->fetchAll();
 
@@ -860,7 +860,7 @@ function Existencias($usuario, $resultado_alterno, $resultuse, $resultcostex, $c
                     $marcaAlterno = ''; // Initialize variable
                     $desc_alterno_db = $desc_alterno_comentario; // Usar la del comentario por defecto
 
-                    $sql = $con->prepare("SELECT inventario.*, marcas.Marca AS MarcaTexto FROM inventario LEFT JOIN marcas ON inventario.Marcas = marcas.Proveedor WHERE referencia = :referencia and Tipo='agro' ");
+                    $sql = $con->prepare("SELECT inventario.*, marcas.Marca AS MarcaTexto FROM inventario LEFT JOIN marcas ON Marcas=Proveedor WHERE referencia = :referencia and Tipo='agro' ");
                     $sql->execute(['referencia' => $ref_alterno]);
                     $resultado = $sql->fetchAll();
 
@@ -926,7 +926,7 @@ function Existencias($usuario, $resultado_alterno, $resultuse, $resultcostex, $c
                     $marcaAlterno = ''; // Initialize variable
                     $desc_alterno_db = $desc_alterno_comentario; // Usar la del comentario por defecto
 
-                    $sql = $con->prepare("SELECT inventario.*, marcas.Marca AS MarcaTexto FROM inventario LEFT JOIN marcas ON inventario.Marcas = marcas.Proveedor WHERE referencia = :referencia and Tipo='agro' ");
+                    $sql = $con->prepare("SELECT inventario.*, marcas.Marca AS MarcaTexto FROM inventario LEFT JOIN marcas ON Marcas=Proveedor WHERE referencia = :referencia and Tipo='agro' ");
                     $sql->execute(['referencia' => $ref_alterno]);
                     $resultado = $sql->fetchAll();
 
