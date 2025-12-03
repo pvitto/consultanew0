@@ -164,7 +164,11 @@ function Existencias($usuario, $resultado_alterno, $resultuse, $resultcostex, $c
                         <tbody>
 
                             <tr>
+
+                        <td>' . $referencia . '</td><td>' . $descripcion . '</td><td>' . $existencias . '</td><td>' . $existencias_bog . '</td><td>' . (!empty($fila['MarcaTexto']) ? $fila['MarcaTexto'] : $fila['Marcas']) . '</td><td>$' . number_format($precio_con_descuento, 0, '.', ',') . '</td>
+
                         <td>' . $referencia . '</td><td>' . $descripcion . '</td><td>' . $existencias . '</td><td>' . $existencias_bog . '</td><td>' . $fila['MarcaTexto'] . '</td><td>$' . number_format($precio_con_descuento, 0, '.', ',') . '</td>
+
                         </tr>
 
                         </tbody>
@@ -201,7 +205,10 @@ function Existencias($usuario, $resultado_alterno, $resultuse, $resultcostex, $c
 
         global $referenciaP;
         $referenciaP = trim(substr($fila['descripcion'], 4, 100));
+fix-marca-visibility-admin-v2
+        $sqlP = "SELECT inventario.*, marcas.Marca AS MarcaTexto FROM inventario LEFT JOIN marcas ON Marcas=Proveedor WHERE referencia = :referenciaP and Tipo='agro' ";
         $sqlP = "SELECT inventario.*, marcas.Marca AS MarcaTexto FROM inventario LEFT JOIN marcas ON inventario.Marcas = marcas.Proveedor WHERE referencia = :referenciaP and Tipo='agro' ";
+ main
         $stmtP = $con->prepare($sqlP);
         $stmtP->execute(['referenciaP' => $referenciaP]);
         $resultP = $stmtP->fetchAll();
@@ -283,7 +290,11 @@ function Existencias($usuario, $resultado_alterno, $resultuse, $resultcostex, $c
                     </thead>
                     <tbody>
             <tr>
+
+            <td>' . $referenciap . '</td><td>' . $descripcion . '</td><td>' . $existencias . '</td><td>' . $existencias_bog . '</td><td>' . (!empty($fila['MarcaTexto']) ? $fila['MarcaTexto'] : $fila['Marcas']) . '</td><td>$' . number_format($precio_con_descuento, 0, '.', ',') . '</td>
+
             <td>' . $referenciap . '</td><td>' . $descripcion . '</td><td>' . $existencias . '</td><td>' . $existencias_bog . '</td><td>' . $fila['MarcaTexto'] . '</td><td>$' . number_format($precio_con_descuento, 0, '.', ',') . '</td>
+ 
             </tr>
 
                     </tbody>
@@ -361,7 +372,11 @@ function Existencias($usuario, $resultado_alterno, $resultuse, $resultcostex, $c
                     </thead>
                     <tbody>
             <tr>
+
+            <td>' . $referenciap . '</td><td>' . $descripcion . '</td><td>' . $existencias . '</td><td>' . $existencias_bog . '</td><td>' . (!empty($fila['MarcaTexto']) ? $fila['MarcaTexto'] : $fila['Marcas']) . '</td><td>$' . number_format($precio_con_descuento, 0, '.', ',') . '</td>
+
             <td>' . $referenciap . '</td><td>' . $descripcion . '</td><td>' . $existencias . '</td><td>' . $existencias_bog . '</td><td>' . $fila['MarcaTexto'] . '</td><td>$' . number_format($precio_con_descuento, 0, '.', ',') . '</td>
+
              </tr>
 
                     </tbody>
@@ -756,7 +771,11 @@ function Existencias($usuario, $resultado_alterno, $resultuse, $resultcostex, $c
             // --- Fin de la carga de descuentos ---
             $_SESSION['selected_usuario'] = $idUsuario;
 
+
+            $sql = $con->prepare("SELECT inventario.*, marcas.Marca AS MarcaTexto FROM inventario LEFT JOIN marcas ON Marcas=Proveedor WHERE referencia = :referencia and Tipo='agro'");
+
             $sql = $con->prepare("SELECT inventario.*, marcas.Marca AS MarcaTexto FROM inventario LEFT JOIN marcas ON inventario.Marcas = marcas.Proveedor WHERE referencia = :referencia and Tipo='agro'");
+
             $sql->execute(['referencia' => $referencia]);
             $resultado_alterno = $sql->fetchAll();
 
@@ -860,7 +879,11 @@ function Existencias($usuario, $resultado_alterno, $resultuse, $resultcostex, $c
                     $marcaAlterno = ''; // Initialize variable
                     $desc_alterno_db = $desc_alterno_comentario; // Usar la del comentario por defecto
 
+
+                    $sql = $con->prepare("SELECT inventario.*, marcas.Marca AS MarcaTexto FROM inventario LEFT JOIN marcas ON Marcas=Proveedor WHERE referencia = :referencia and Tipo='agro' ");
+
                     $sql = $con->prepare("SELECT inventario.*, marcas.Marca AS MarcaTexto FROM inventario LEFT JOIN marcas ON inventario.Marcas = marcas.Proveedor WHERE referencia = :referencia and Tipo='agro' ");
+
                     $sql->execute(['referencia' => $ref_alterno]);
                     $resultado = $sql->fetchAll();
 
@@ -870,7 +893,11 @@ function Existencias($usuario, $resultado_alterno, $resultuse, $resultcostex, $c
                             $existenciasAlterno = $fila['Existencias'] + $fila['Existencias_bog'];
                             $existencias_baq= $fila['Existencias'];
                             $existencias_bog =$fila['Existencias_bog'];
+
+                            $marcaAlterno = (!empty($fila['MarcaTexto']) ? $fila['MarcaTexto'] : $fila['Marcas']);
+
                             $marcaAlterno = $fila['MarcaTexto'];
+
                             $lineaAlterno = $fila['Linea'];
 
                             // Si la descripción del comentario está vacía, usamos la de la BD
@@ -926,7 +953,11 @@ function Existencias($usuario, $resultado_alterno, $resultuse, $resultcostex, $c
                     $marcaAlterno = ''; // Initialize variable
                     $desc_alterno_db = $desc_alterno_comentario; // Usar la del comentario por defecto
 
+
+                    $sql = $con->prepare("SELECT inventario.*, marcas.Marca AS MarcaTexto FROM inventario LEFT JOIN marcas ON Marcas=Proveedor WHERE referencia = :referencia and Tipo='agro' ");
+
                     $sql = $con->prepare("SELECT inventario.*, marcas.Marca AS MarcaTexto FROM inventario LEFT JOIN marcas ON inventario.Marcas = marcas.Proveedor WHERE referencia = :referencia and Tipo='agro' ");
+
                     $sql->execute(['referencia' => $ref_alterno]);
                     $resultado = $sql->fetchAll();
 
@@ -936,7 +967,11 @@ function Existencias($usuario, $resultado_alterno, $resultuse, $resultcostex, $c
                             $existenciasAlterno = $fila['Existencias'] + $fila['Existencias_bog'];
                             $existencias_baq= $fila['Existencias'];
                             $existencias_bog =$fila['Existencias_bog'];
+
+                            $marcaAlterno = (!empty($fila['MarcaTexto']) ? $fila['MarcaTexto'] : $fila['Marcas']);
+
                             $marcaAlterno = $fila['MarcaTexto'];
+
                             $lineaAlterno = $fila['Linea'];
 
                             // Si la descripción del comentario está vacía, usamos la de la BD
